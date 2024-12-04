@@ -165,6 +165,17 @@ system_message_dict = {
         charisma= ,
     }
     """,
+    "Choose response type": """You are the assistant of a D&D 5e dungeonmaster. Based on a the human input, choose which one of the following scenario's is happening.
+    The options are: 
+    - Combat
+    - Exploration
+    - Conversation
+    Format your output as a single word. Example:
+    ```
+    Combat
+    ```
+    """
+
     "combat": """ You are a D&D 5e dungeon master. The player is in a combat encounter with an enemy. The player stats are 
     {player_stats}, the enemy stats are {enemy_stats}. 
     """,
@@ -204,11 +215,21 @@ class Game():
         self.combat = False
         while(True):
             human_input = input('> ')
-            if self.combat:
-                system_message = system_message_dict["combat"]
-            else: 
-                system_message = system_message_dict["general"]
-            text = self.llm.answer(human_input, system_message, session_id)
+
+            # Let LLM choose the response type
+            session_id = 10
+            system_message = system_message_dict["Choose response type"]
+            llm_type = self.llm.answer(human_input, system_message=system_message)
+
+            # LLM responds 
+            session_id = 1
+            text= self.llm.answer(human_input, system_message_dict[llm_type])
+
+            # if self.combat:
+            #     system_message = system_message_dict["combat"]
+            # else: 
+            #     system_message = system_message_dict["general"]
+            # text = self.llm.answer(human_input, system_message, session_id)
             print(text + '\n')
     
     def start_encounter(self):

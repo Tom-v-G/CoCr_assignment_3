@@ -14,13 +14,15 @@ from langchain_core.prompts.chat import (
     MessagesPlaceholder,
 )
 
+import regex as re
+
 # Local LLM implementation
 class LLM:
     
     template_messages = [
-            ("system", "{system}"),
+            SystemMessage("{system}"),
             MessagesPlaceholder(variable_name="history", optional=True),
-            ("human" , "{input}"),
+            HumanMessagePromptTemplate.from_template("{input}"),
         ]
     
     # print(template_messages)
@@ -29,29 +31,34 @@ class LLM:
     
     # memory = ConversationBufferMemory(memory_key="chat_history", return_messages=True)
     
-    response_schemas = [
-    ResponseSchema(name="text", description="Human readable answer to the user's question"),
-    ResponseSchema(
-        name="difficulty",
-        description="Difficulty of the question asked by the user. Should be a number between 0 and 10.",
-    ),
-]
-    output_parser = StructuredOutputParser.from_response_schemas(response_schemas)
+    # response_schemas = [
+    #     # ResponseSchema(
+    #     #     name="text", 
+    #     #     description="Human readable answer to the user's question"
+    #     # ),
+    #     # ResponseSchema(
+    #     #     name="difficulty",
+    #     #     description="Difficulty of the question asked by the user. Should be a number between 0 and 10.",
+    #     # ),
+    # ]
+    # output_parser = StructuredOutputParser.from_response_schemas(response_schemas)
 
-    format_instructions = output_parser.get_format_instructions()
+    # format_instructions = output_parser.get_format_instructions()
+    # print(format_instructions)
 
     # prompt_template = ChatPromptTemplate.from_messages(template_messages)
     prompt_template = ChatPromptTemplate(
         messages=template_messages,
-        partial_variables={"format_instructions": format_instructions},
-        validate_template=True
+        # partial_variables={"format_instructions": format_instructions},
+        validate_template=True,
     )
     # prompt = PromptTemplate(
     # template="answer the users question as best as possible.\n{format_instructions}\n{question}",
     # input_variables=["question"],
     # partial_variables={"format_instructions": format_instructions},
-# )
-    runnable = (prompt_template | model | output_parser)
+    # )
+    # print(prompt_template + '\n')
+    runnable = (prompt_template | model) # | output_parser)
 
     def __init__(self) -> None:
         self.store = {}
@@ -62,6 +69,8 @@ class LLM:
             input_messages_key="input",
             history_messages_key="history",
         )
+
+        # print(self.with_message_history)
 
     
     def get_session_history(self, session_id: str) -> BaseChatMessageHistory:

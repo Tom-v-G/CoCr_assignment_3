@@ -3,6 +3,9 @@ from abc import ABC
 
 from LLM import LLM
 
+from pydantic import BaseModel, Field
+from typing import Dict
+
 def roll_dice(sides):
     return np.random.randint([1 for i in sides], sides, size=(len(sides)))
 
@@ -65,23 +68,93 @@ class entity(ABC):
         if not self.is_alive():
             return print(f"{self.name} has been defeated")
 
+    def get_stats(self):
+        stats = {
+            "health": self.health,
+            "strength": self.strength,
+            "dexterity": self.dexterity,
+            "constitution": self.constitution,
+            "intelligence": self.intelligence,
+            "wisdom": self.wisdom,
+            "charisma": self.charisma,
+            "name": self.name
+        }
+
+        return stats
+
+class Item(BaseModel):
+    """
+    Items the player can carry in their inventory. Items have a name and a description that the LLM can use to infer item effects
+    """
+    name: str = Field(description="Item name")
+    description: str = Field(description="Description of the function of this item")
+
+class Inventory(BaseModel):
+    """
+    The player inventory
+    """
+    inventory: Dict[Item, int] = Field(description='Character Inventory')
+
+    def add_item(self, to_add: Item, amount: int) -> None:
+        """
+        Adds the specified amount of items to the inventory
+        """
+        for item in self.inventory.keys():
+            if item == to_add:
+                self.inventory[item] = self.inventory[item] + amount
+                return True
+        self.inventory[to_add] = amount
+        return True
+
+    def remove_item(self, to_remove: Item, amount: int):
+        """
+        Removes items from the inventory. returns False if the action fails (e.g. more items are requested to be removed than exist,
+        item is not in inventory)
+        """
+        for item in self.inventory.keys():
+            if item == to_remove:
+                if amount > self.inventory[item]:
+                    return False
+                if amount == self.inventory[item]:
+                    self.inventory.pop(item)
+                else:
+                    self.inventory[item] = self.inventory[item] - amount
+                return True
+        return False
+
 class Player(entity):
 
     def __init__(self, **kwargs) -> None:
         super().__init__(**kwargs)
-        self.inventory = {}
+        self.inventory = Inventory(inventory={})
+        self.weapon = None
 
     def set_weapon(self, weapon):
-        self.inventory["weapon"] = weapon
+        self.weapon = weapon
     
     def get_weapon(self):
-        return self.inventory["weapon"]
+        return self.weapon
+    
 
     def get_damage_dice(self):
         if "weapon" in self.inventory:
             return self.inventory["weapon"].get_dice()
         else: #bare-handed
             return [6]
+        
+    def add_item(self, item: Item, amount: int) -> None:
+        self.inventory.add_item(item, amount)
+    
+    def remove_item(self, item: Item, amount: int) -> None:
+        self.inventory.remove_item(item, amount)
+
+    def use_item(self, item: Item) -> None:
+        self.inventory.remove_item(item, 1)
+    
+    def remove_item(self, item_name: str) -> None:
+        for item in self.inventory:
+            if item.name == item_name:
+                self.inventory.remove(item) # TODO
             
 
 class Weapon(ABC):
@@ -103,27 +176,6 @@ class Monster(entity):
         super().__init__(**kwargs)
         self.damage_dice_sides = [6]
 
-slime = Monster(
-        health=100,
-        strength=8,
-        dexterity=8,
-        constitution=8,
-        intelligence=8,
-        wisdom=8,
-        charisma=8,
-        name="Slime"
-    )
-
-clown = Monster(
-        health=200,
-        strength=20,
-        dexterity=8,
-        constitution=8,
-        intelligence=8,
-        wisdom=8,
-        charisma=1000,
-        name="Clown"
-    )
 
 class CombatEncounter():
     def __init__(self, player: Player, enemy: Monster) -> None:
@@ -153,10 +205,10 @@ class CombatEncounter():
             
 
 system_message_dict = {
-    "start": """You are a D&D 5e dungeonmaster. Start a new text-based rpg adventure. Describe the setting and the player character. Also fill in the blanks in the python dictionary below:
+    "create_setting": """You are a D&D 5e dungeonmaster. Start a new text-based rpg adventure. Describe only the setting of the adventure.""",
+    "create_character": """You are a D&D 5e dungeonmaster. Based on the given setting, create a character for the player. The player should not receive any starting bonusses. Format your output as a JSON dictionary. Only return this dictionary. Fill in the blanks below
     player = { 
         name= ,
-        level= ,
         strength= ,
         dexterity= ,
         constitution= ,
@@ -165,6 +217,7 @@ system_message_dict = {
         charisma= ,
     }
     """,
+    "start": """You are a D&D 5e dungeonmaster. Start a new text-based rpg adventure. Based on the conversation history, describe the setting and the player character.""",
     "Choose response type": """You are the assistant of a D&D 5e dungeonmaster. Based on a the human input, choose which one of the following scenario's is happening.
     The options are: 
     - Combat
@@ -174,7 +227,7 @@ system_message_dict = {
     ```
     Combat
     ```
-    """
+    """,
 
     "combat": """ You are a D&D 5e dungeon master. The player is in a combat encounter with an enemy. The player stats are 
     {player_stats}, the enemy stats are {enemy_stats}. 
@@ -207,12 +260,27 @@ class Game():
     
     def __init__(self) -> None:
         self.llm = LLM()
-
-        system_message = system_message_dict["start"]
         session_id = 1
-        start_text = self.llm.answer("", system_message, session_id)
+
+        system_message = system_message_dict["create_setting"]
+        setting_text = self.llm.answer("", system_message, session_id)
+        print(setting_text)
+        print("-"*50)
+        system_message = system_message_dict["create_character"]
+        character_text = self.llm.answer("", system_message, session_id)
+        print(character_text)
+        print("-"*50)
+        system_message = system_message_dict["start"]
+        start_text = self.llm.answer("", system_message, session_id)  
         print(start_text)
+        print("-"*50)
         self.combat = False
+
+        return True
+
+        # init player
+        self.player = Player() #TODO
+
         while(True):
             human_input = input('> ')
 
@@ -231,9 +299,30 @@ class Game():
             #     system_message = system_message_dict["general"]
             # text = self.llm.answer(human_input, system_message, session_id)
             print(text + '\n')
-    
-    def start_encounter(self):
-        self.combat = True
+
+    def parse_player(player_string: str) -> Player:
+        
+        """
+
+        ```
+        player = { 
+            name: "Eira Shadowglow",
+            strength: 14 (+2),
+            dexterity: 18 (+4),
+            constitution: 12 (+1),
+            intelligence: 10 (+0),
+            wisdom: 13 (+1),
+            charisma: 16 (+3)
+        }
+        ```
+        """
+        return False
+
+    def run_combat(self):
+        combat = CombatEncounter()
+
+
+
 
     # self.llm 
     # llm_input_string:

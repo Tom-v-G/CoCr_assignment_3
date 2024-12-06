@@ -28,5 +28,8 @@ LLM: {Verhaaltje: " je komt een slime tegen", functieheader: initalise_monster(t
 "Return a json object with a story for the player and a function.."
 - Allow LLM to initialise player 
 
+Tier III:
+    - create Glossary from keywords in the llm text.
+
 Advanced:
 - GUI

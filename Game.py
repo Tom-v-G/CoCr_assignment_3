@@ -1,11 +1,13 @@
-import numpy as np
 from abc import ABC
+import ast #string to dict conversion
 
 from LLM import LLM
 
+import numpy as np
 from pydantic import BaseModel, Field
 from typing import Dict
 
+#[6, 6]
 def roll_dice(sides):
     return np.random.randint([1 for i in sides], sides, size=(len(sides)))
 
@@ -260,7 +262,7 @@ class Game():
     
     def __init__(self) -> None:
         self.llm = LLM()
-        session_id = 1
+        session_id = 0
 
         system_message = system_message_dict["create_setting"]
         setting_text = self.llm.answer("", system_message, session_id)
@@ -269,12 +271,15 @@ class Game():
         system_message = system_message_dict["create_character"]
         character_text = self.llm.answer("", system_message, session_id)
         print(character_text)
-        print("-"*50)
-        system_message = system_message_dict["start"]
-        start_text = self.llm.answer("", system_message, session_id)  
-        print(start_text)
-        print("-"*50)
-        self.combat = False
+        try: print(ast.literal_eval(character_text))
+        except: Exception()
+
+        # print("-"*50)
+        # system_message = system_message_dict["start"]
+        # start_text = self.llm.answer("", system_message, session_id)  
+        # print(start_text)
+        # print("-"*50)
+        # self.combat = False
 
         return True
 
@@ -348,25 +353,36 @@ class Game():
     # ... 
 
 if __name__ == "__main__":
-    p = Player(
-        health=100,
-        strength=8,
-        dexterity=8,
-        constitution=8,
-        intelligence=8,
-        wisdom=8,
-        charisma=8,
-        name="Pipo"
-    )
-    e = Monster(
-        health=100,
-        strength=8,
-        dexterity=8,
-        constitution=8,
-        intelligence=8,
-        wisdom=8,
-        charisma=8,
-        name="Slime"
-    )
-
+    # p = Player(
+    #     health=100,
+    #     strength=8,
+    #     dexterity=8,
+    #     constitution=8,
+    #     intelligence=8,
+    #     wisdom=8,
+    #     charisma=8,
+    #     name="Pipo"
+    # )
+    # e = Monster(
+    #     health=100,
+    #     strength=8,
+    #     dexterity=8,
+    #     constitution=8,
+    #     intelligence=8,
+    #     wisdom=8,
+    #     charisma=8,
+    #     name="Slime"
+    # )
+    text = """{
+    "name": "Eira Shadowglow",
+    "strength": 10,
+    "dexterity": 14,
+    "constitution": 12,
+    "intelligence": 8,
+    "wisdom": 13,
+    "charisma": 10
+    }"""
+    
+    # print(ast.literal_eval("{'muffin' : 'lolz', 'foo' : 'kitty'}"))
+    # {'muffin': 'lolz', 'foo': 'kitty'}
     g = Game()

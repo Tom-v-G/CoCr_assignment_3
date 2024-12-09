@@ -22,13 +22,7 @@ import regex as re
 # Local LLM implementation
 class LLM:
     
-    # template_messages = [
-    #         SystemMessage("{system}"),
-    #         # SystemMessage("{format_instructions}"),
-    #         MessagesPlaceholder(variable_name="history", optional=True),
-    #         HumanMessagePromptTemplate.from_template("{input}"),
-    #     ]
-    
+   
     template_messages = [
         ("system", "{system}"),
         # SystemMessage("{format_instructions}"),
@@ -124,22 +118,9 @@ class LLM:
 
 if __name__ == '__main__':
     
-    # Create limericks
     llm = LLM()
-    
-    # system_message = """You are a D&D dungeon master. Based on the player response, choose a monster that the player encounters. 
-    # Only output a json dictionary that contains information about the monster.
-    # Your output should be formatted as a json dictionary. Example: ```json
-    # {
-    # name: "Slime"
-    # attack: 20
-    # defense: 10
-    # }
-    # ```
-    # """
-    # for i in range (2):
-    #     text = input('\n')
-    #     print(llm.answer(text, system_message, session_id=str(190)))
+
+
     system_message = """You are a D&D 5e dungeonmaster. Start a new text-based rpg adventure. Describe the setting and the player character. Also fill in the blanks in the python dictionary below:
     player = { 
         name= ,

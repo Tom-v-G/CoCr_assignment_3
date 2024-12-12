@@ -3,6 +3,7 @@ Tier I
 - Player Class
 - Monster Class
 - Combat Mechanics
+>
 - Link combat mechanics to LLM (only storytelling)
 
 Functies waartoe de LLM toegang heeft:

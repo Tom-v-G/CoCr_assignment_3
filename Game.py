@@ -358,11 +358,8 @@ class Game():
         self.conversation_history.append(text)
         return text
 
-    def main_loop(self):
-        
-        while(True):
-            # Allow for human input
-            human_input = self.parse_human_input()
+        while True:
+            human_input = input('> ')
 
             # Let LLM choose the response type
             session_id = 3

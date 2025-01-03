@@ -6,6 +6,7 @@ from LLM import LLM
 import numpy as np
 from pydantic import BaseModel, Field
 from typing import Dict
+import re
 
 #[6, 6]
 def roll_dice(sides):
@@ -248,6 +249,15 @@ system_message_dict = {
         "charisma": ,
     }
     """,
+    "summarize": """You are a D&D 5e dungeonmaster playing a text based rpg with the user. Based on the conversation history, summarize the latest events of the game.""",
+    "create_item": """You are a D&D 5e dungeonmaster. Based on the provided conversation history, create loot for the player to find. Format your output as a python dictionary.
+    Only output this dictionary. Fill in the blanks below:
+    item = {
+        "name": "",
+        "description": ""    
+    }
+    """,
+    "use_item":""" """,
     "create_enemy": """You are a D&D 5e dungeonmaster. Based on the given setting and the supplied conversation history, fill in the dictionary below. 
     The player is allowed to attack anyone, even other humans. Format your output as a JSON dictionary. Only return this dictionary. Fill in the blanks below
     enemy = { 
@@ -274,7 +284,7 @@ system_message_dict = {
     ```
     Only return 'Combat' if you are absolutely sure the player is going to enter a battle.
     """,
-    "player_question": """You are a D&D 5e dungeon master. Answer the player's question.""",
+    "question": """You are a D&D 5e dungeon master. Answer the player's question.""",
     "describe_combat_encounter": """You are a D&D 5e dungeon master. Based on the given conversation history create an enemy.and the given information about the enemy, write the setting of the combat encounter. 
     """,
     "combat": """You are a D&D 5e dungeon master. The player is in a combat encounter with an enemy. The player stats are 
@@ -398,9 +408,16 @@ class Game():
         try: 
             weapon_dict = ast.literal_eval(weapon_string)
             weapon = Weapon(**weapon_dict)
-        except:
-            return False
-        
+        except Exception as e:
+            # print(e)
+            try: 
+                # Try finding the dictionary string in the LLM output
+                weapon_string = re.search('\{(.|\n)*\}', weapon_string).group()
+                weapon_dict = ast.literal_eval(weapon_string)
+                weapon = Weapon(**weapon_dict)
+            except Exception as e2:
+                print(e2)
+                return False
         return weapon
 
     def parse_player(self, player_string: str) -> Player:
@@ -410,8 +427,16 @@ class Game():
         try:
             player_dict = ast.literal_eval(player_string)
             self.player = Player(**player_dict)
-        except:
-            return False
+        except Exception as e:
+            # print(e)
+            try: 
+                # Try finding the dictionary string in the LLM output
+                player_string = re.search('\{(.|\n)*\}', player_string).group()
+                player_dict = ast.literal_eval(player_string)
+                self.player = Player(**player_dict)
+            except Exception as e2:
+                print(e2)
+                return False
         
         return True
     
@@ -423,7 +448,7 @@ class Game():
             case 'combat':  return 'combat'
             case 'exploration': return 'exploration'
             case 'conversation': return 'conversation'
-            case 'question': return 'player_question'
+            case 'question': return 'question'
         return 'general'
 
     def run_combat(self):
@@ -457,7 +482,9 @@ class Game():
         '''
 
         system_message = system_message_dict["create_enemy"]
-        history_input = self.conversation_history[-5:]
+        # Cap recent history_input
+        history_length = 10
+        history_input = self.conversation_history[-history_length:] if len(self.conversation_history) > history_length else self.conversation_history
         print(history_input)
 
         while(True):

@@ -31,13 +31,13 @@ python3 Game.py
 Rajiv and Tom
 
 #### Report
-Abstract: Rajiv, Tom, Samaneh, Snehil
-Introduction: Rajiv, Tom
-Methods: Rajiv, Tom
-Evaluation and Results: Samaneh, Snehil
-Discussion (Creation of the Co-Creative System): Rajiv, Tom
-Discussion (User Experience and Comparative Analysis with Other AI-Driven
-Storytelling Tools): Samaneh, Snehil
-Conclusion: Rajiv, Tom
-Interdisciplinary Applications: Samaneh, Snehil
+- Abstract: Rajiv, Tom, Samaneh, Snehil
+- Introduction: Rajiv, Tom
+- Methods: Rajiv, Tom
+- Evaluation and Results: Samaneh, Snehil
+- Discussion (Creation of the Co-Creative System): Rajiv, Tom
+- Discussion (User Experience and Comparative Analysis with Other AI-Driven
+- Storytelling Tools): Samaneh, Snehil
+- Conclusion: Rajiv, Tom
+- Interdisciplinary Applications: Samaneh, Snehil
 

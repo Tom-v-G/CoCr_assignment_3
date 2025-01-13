@@ -16,7 +16,7 @@ This script has been tested on a laptop using an AMD Ryzen 7 6800H CPU and a NVI
   pip install langchain langchain-community pydantic regex
   ```
   
-- download (ollama3.1)[https://github.com/ollama/ollama] and, from the shell, run the command `ollama run llama3.1` at least once. 
+- download [ollama3.1](https://github.com/ollama/ollama) and, from the shell, run the command `ollama run llama3.1` at least once. 
 
 ## Running
 The game can be played by running the command 

@@ -522,7 +522,6 @@ class Game():
         history_length = 10
         history_input = self.conversation_history[-history_length:] if len(self.conversation_history) > history_length else self.conversation_history    
         enemy_text = self.query_llm(history_input, system_message, session_id=self.enemy_creation_id)
-        # print(enemy_text)
         enemy = self.parse_enemy(enemy_text)
             
         self.enemy_creation_id += 1

@@ -8,8 +8,10 @@ from pydantic import BaseModel, Field
 from typing import Dict
 import re
 
-#[6, 6]
 def roll_dice(sides):
+    '''
+    Performs vectorized dice rolls on a provided list of dices. E.g. sides=[6,6] rolls 2 d6 dice
+    '''
     return np.random.randint([1 for i in sides], sides, size=(len(sides)))
 
 class entity(ABC):
@@ -37,7 +39,6 @@ class entity(ABC):
         return [6]
 
     def get_ability_modifier(self, ability_score):
-        #TODO
         return (ability_score - 10) // 2
     
     def get_armor_class(self):
@@ -211,13 +212,6 @@ class CombatEncounter():
         if action in self.player.actions:
             if action == "attack":
                 self.player.attack_enemy(self.enemy)
-            '''
-            player.attack
-            if enemy == dead:
-                end encounter
-            enemy attacks
-            return dict{player stats, enemy stats}
-            '''
     
     def enemy_turn(self, player):
         self.enemy.attack_enemy(player)
@@ -327,22 +321,6 @@ system_message_dict = {
     "general": """You are the dungeonmaster in a text-based rpg adventure. Respond to the player input based on the conversation history."""
 }
 
-"""
-    Format your responses as follows:
-    '''human readable
-    This part should be human readable text describing the current situation
-    '''
-
-    '''
-    choose one of the following strings to return based on the current situation:
-     - "start encounter"
-     - "give item"
-     - "exit game"
-     - "charisma check"
-     - "do nothing" 
-    '''
-"""
-
 class Game():
     
     def __init__(self) -> None:
@@ -354,8 +332,6 @@ class Game():
 
         system_message = system_message_dict["create_setting"]
         setting_text = self.query_llm("", system_message, self.session_id)
-        # print(f"Setting text: \n {setting_text}")
-        # print("-"*50)
         
         # Player Initialisation
         self.session_id = 1
@@ -363,33 +339,27 @@ class Game():
         not_done = True
         while(not_done):
             character_text = self.query_llm(setting_text, system_message, self.session_id)
-            # print(f"Character text: \n {character_text}")
             not_done = not self.parse_player(character_text)
-        # print("-"*50)
 
         self.session_id = 2
         system_message = system_message_dict["create_weapon"]
         not_done = True
         while(not_done):
             weapon_text = self.query_llm(character_text, system_message, self.session_id)
-            # print(weapon_text)
             weapon = self.parse_weapon(weapon_text)
 
             not_done = not isinstance(weapon, Weapon)
             
         self.player.set_weapon(weapon=weapon)
 
-        # print(self.player.get_stats())
-        # print("-"*50)
-        self.session_id = 3
-        # TODO: supply character and setting text  
+        # Create starting message 
+        self.session_id = 3 
         system_message = system_message_dict["start"]
         print(self.query_llm(f"""Setting description: \n {setting_text} \n Character description: \n {character_text}
                             \n Weapon description: \n {weapon_text}
                               """, system_message, self.session_id))
 
     def parse_human_input(self):
-        # print('-'*100)
         human_input = input('> ')
         self.conversation_history.append(human_input)
         return human_input
@@ -399,9 +369,9 @@ class Game():
         self.conversation_history.append(text)
         return text
 
+    def main_loop(self):
         while True:
             human_input = input('> ')
-
             # Let LLM choose the response type
             self.session_id = 3
             not_done = True
@@ -411,7 +381,6 @@ class Game():
                 llm_response_type = self.query_llm(human_input, system_message=system_message, session_id=self.session_id)
                 # print(f'DEBUG: {llm_response_type}')
                 llm_response_type = self.parse_response_type(llm_response_type)
-                # print(llm_response_type)
                 if llm_response_type !='general':
                     not_done = False
                 counter += 1
@@ -419,14 +388,18 @@ class Game():
                     break
             system_message = llm_response_type
 
+            # Combat enters different game state
             if system_message == "combat":
+                print('-'*50)
+                print('\t Starting Combat Mode')
+                print('-'*50)
                 combat_text = self.run_combat()
                 text = self.query_llm(combat_text, system_message_dict['end_of_combat'], session_id=self.session_id)
             else:    
-                # Let the LLM repond
+                # Let the LLM repond with corresponding response type
                 text= self.query_llm("", system_message_dict[llm_response_type], session_id=self.session_id)
                 print(text + '\n')
-            print('-'*20)
+            print('-'*50)
 
     def parse_weapon(self, weapon_string: str) -> Weapon:
         """
@@ -483,7 +456,7 @@ class Game():
                 enemy_dict = ast.literal_eval(enemy_string)
                 enemy = Monster(**enemy_dict)
             except Exception as e2:
-                print(e2)
+                # print(e2)
                 enemy = Monster()
         
         return enemy
@@ -500,13 +473,6 @@ class Game():
         return 'general'
 
     def run_combat(self):
-        
-        # systemmessage: LLM creeert monster
-        # systemmessage: gebasseerd op monster, schrijf begin van encounter
-        # -> inject character, weapon and conversation history
-        # initiative roll: -> monster eerst of player eerst
-        # systemmessage: parse player input: attack, gebruik item uit inventory, question, of run away (gebasseerd op dexterity roll oid)
-        #   
         enemy = self.create_enemy()
         # print(f'DEBUG: enemy stats: {enemy.get_stats()}')
         text = self.query_llm(f"Conversation history: {self.conversation_history[-5:]} \n Enemy: {enemy.get_stats()}", 
@@ -517,13 +483,7 @@ class Game():
         while(True):
             print('-'*20)
             human_input =  self.parse_human_input()
-
-            # text = self.query_llm(human_input, 
-            #            system_message_dict["combat_parser"], 
-            #            session_id=self.combat_session_id)
            
-
-            
             text = self.query_llm(human_input, 
                        system_message_dict["combat_parser_and_narrator"], 
                        session_id=self.combat_session_id)
@@ -533,16 +493,6 @@ class Game():
 
             self.parse_health(enemy, text)
 
-            # text = self.query_llm(f"player health: {self.player.health}\n enemy health: {enemy.health}", 
-            #            system_message_dict["combat_narrator"], 
-            #            session_id=self.combat_session_id)
-            # print(text)
-            
-            # combat_over_string = self.query_llm("", 
-            #            system_message_dict["is_combat_over"], 
-            #            session_id=self.combat_session_id)
-            # print(f'DEBUG: is combat over? {combat_over_string}')
-
             if not self.player.is_alive():
                 print('You Died')
                 self.combat_session_id += 1 
@@ -551,12 +501,6 @@ class Game():
                 print(f'{enemy.name} died')
                 self.combat_session_id += 1 
                 return text
-            
-        # text = self.query_llm("",
-        #                       system_message_dict["end_of_combat"],
-        #                       session_id=self.session_id)
-        # combat = CombatEncounter(player=self.player, enemy=enemy)
-        # return combat
 
     def parse_health(self, enemy, health_change_string):
         try:
@@ -565,100 +509,25 @@ class Game():
             self.player.health = health_dict['player_health']
             enemy.health = health_dict['enemy_health']
         except Exception as e:
-            # print(e)
             # print('Health dictionary not instantiated')
             self.player.health -= 1
             enemy.health -= 1
 
     def create_enemy(self):
         '''
-
+        Creates an enemy class instance based on recent conversation history
         '''
         system_message = system_message_dict["create_enemy"]
         # Cap recent history_input
         history_length = 10
-        history_input = self.conversation_history[-history_length:] if len(self.conversation_history) > history_length else self.conversation_history
-        # print(history_input)
-
-        
+        history_input = self.conversation_history[-history_length:] if len(self.conversation_history) > history_length else self.conversation_history    
         enemy_text = self.query_llm(history_input, system_message, session_id=self.enemy_creation_id)
-        print(enemy_text)
+        # print(enemy_text)
         enemy = self.parse_enemy(enemy_text)
             
         self.enemy_creation_id += 1
         return enemy
 
-    # self.llm 
-    # llm_input_string:
-    #     player stats 
-    #     player inventory: {}
-    #     the player is in an encounter:
-    #         enemy: 
-
-
-    # llm output: {"Text op het scherm", gamefunction}
-
-    # Chat example
-    # llm: you have encountered a slime: yadaya slime stats
-    # llm: what would you like to do?
-
-    # player: I attack
-
-    # llm_response = {human readable text: "You swing at the slime with your sword", combatencouter.turn()}
-    # print(llm_response["human_readable"])
-    # game.process(llm_response:["function"])
-
-    # system_prompt: process the input from the player: return a text and a function, this is the list of possible functions:
-    # ... 
-
 if __name__ == "__main__":
-    # p = Player(
-    #     health=100,
-    #     strength=8,
-    #     dexterity=8,
-    #     constitution=8,
-    #     intelligence=8,
-    #     wisdom=8,
-    #     charisma=8,
-    #     name="Pipo"
-    # )
-    # e = Monster(
-    #     health=100,
-    #     strength=8,
-    #     dexterity=8,
-    #     constitution=8,
-    #     intelligence=8,
-    #     wisdom=8,
-    #     charisma=8,
-    #     name="Slime"
-    # )
-    text = """{
-        "name": "Test",
-        "health": 100,
-        "strength": 10,
-        "dexterity": 12,
-        "constitution": 13,
-        "intelligence": 14,
-        "wisdom": 15,
-        "charisma": 16
-    }"""
-
-    weapon = """{
-        "weapon_type": "Staff",
-        "damage_dice": [20, 6, 3],
-        "name": "Giga staff"
-    }"""
-
-    # player_dict = ast.literal_eval(text)
-    # player = Player(**player_dict)
-
-    # weapon_dict = ast.literal_eval(weapon)
-    # player_weapon = Weapon(**weapon_dict)
-    # player.weapon = player_weapon
-    
-    # print(player.get_stats())
-    # player.add_item(Item(name='health potion', description='gives health'), 2)
-    # print(player.get_stats())
-
     g = Game()
     g.main_loop()
